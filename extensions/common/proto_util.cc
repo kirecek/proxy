@@ -40,7 +40,7 @@ flatbuffers::DetachedBuffer extractNodeFlatBufferFromStruct(
     const google::protobuf::Struct& metadata) {
   flatbuffers::FlatBufferBuilder fbb;
   flatbuffers::Offset<flatbuffers::String> name, namespace_, owner,
-      workload_name, istio_version, mesh_id, cluster_id;
+      workload_name, istio_version, mesh_id, cluster_id, zone;
   std::vector<flatbuffers::Offset<KeyVal>> labels, platform_metadata;
   std::vector<flatbuffers::Offset<flatbuffers::String>> app_containers;
   for (const auto& it : metadata.fields()) {
@@ -76,6 +76,8 @@ flatbuffers::DetachedBuffer extractNodeFlatBufferFromStruct(
       for (const auto& container : containers) {
         app_containers.push_back(fbb.CreateString(toStdStringView(container)));
       }
+    } else if (it.first == "ZONE") {
+      zone = fbb.CreateString(it.second.string_value());
     }
   }
   // finish pre-order construction
@@ -105,6 +107,7 @@ flatbuffers::DetachedBuffer extractNodeFlatBufferFromStruct(
   node.add_labels(labels_offset);
   node.add_platform_metadata(platform_metadata_offset);
   node.add_app_containers(app_containers_offset);
+  node.add_zone(zone);
   auto data = node.Finish();
   fbb.Finish(data);
   return fbb.Release();
@@ -114,6 +117,9 @@ void extractStructFromNodeFlatBuffer(const FlatNode& node,
                                      google::protobuf::Struct* metadata) {
   if (node.name()) {
     (*metadata->mutable_fields())["NAME"].set_string_value(node.name()->str());
+  }
+  if (node.zone()) {
+    (*metadata->mutable_fields())["ZONE"].set_string_value(node.zone()->str());
   }
   if (node.namespace_()) {
     (*metadata->mutable_fields())["NAMESPACE"].set_string_value(

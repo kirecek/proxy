@@ -222,7 +222,7 @@ flatbuffers::DetachedBuffer extractEmptyNodeFlatBuffer() {
 flatbuffers::DetachedBuffer extractLocalNodeFlatBuffer() {
   flatbuffers::FlatBufferBuilder fbb;
   flatbuffers::Offset<flatbuffers::String> name, namespace_, owner,
-      workload_name, istio_version, mesh_id, cluster_id;
+      workload_name, istio_version, mesh_id, cluster_id, zone;
   std::vector<flatbuffers::Offset<KeyVal>> labels, platform_metadata;
   std::vector<flatbuffers::Offset<flatbuffers::String>> app_containers;
   std::string value;
@@ -246,6 +246,9 @@ flatbuffers::DetachedBuffer extractLocalNodeFlatBuffer() {
   }
   if (getValue({"node", "metadata", "CLUSTER_ID"}, &value)) {
     cluster_id = fbb.CreateString(value);
+  }
+  if (getValue({"node", "locality", "zone"}, &value)) {
+    zone = fbb.CreateString(value);
   }
   {
     auto buf = getProperty({"node", "metadata", "LABELS"});
@@ -287,6 +290,7 @@ flatbuffers::DetachedBuffer extractLocalNodeFlatBuffer() {
   node.add_labels(labels_offset);
   node.add_platform_metadata(platform_metadata_offset);
   node.add_app_containers(app_containers_offset);
+  node.add_zone(zone);
   auto data = node.Finish();
   fbb.Finish(data);
   return fbb.Release();
